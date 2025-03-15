@@ -1,0 +1,74 @@
+# Homework_2
+
+## Выполненные задания
+
+1. **Установка Nginx и Gunicorn**
+   - Установлены Nginx и Gunicorn для запуска WSGI-приложения.
+   *nginx: sudo apt install nginx 
+   *Gunicorn: pip install gunicorn
+
+2. **Настройка Nginx для статических файлов из public/**
+   - Настроен Nginx для отдачи статических файлов из директории `public/`.
+   *# Статические файлы
+    location /public/ {
+        alias /home/oleg/mai_projects/2025-MAI-Backend-O-Baranov/public/; --тут нужно указать ваше расположение проекта со статикой, также лучше использовать виртуальное окружение
+        expires 30d;
+    }
+
+3. **Создание WSGI-приложения**
+   - Создан простейший WSGI-приложение (`myapp.py`) и запущен с помощью Gunicorn.
+   *myapp.py с приложением в src и оформление из index.html в public/
+   *пример запуска `gunicorn src.myapp:app --bind 127.0.0.1:8000`
+
+4. **Настройка проксирования запросов на Nginx**
+   - Настроено проксирование запросов от Nginx к Gunicorn.
+   *# Проксирование на Gunicorn
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+5. **Измерение производительности**
+   - Измерена производительность Nginx и Gunicorn с помощью `wrk`.
+   *Gunicorn напрямую (без Nginx): wrk -t10 -c100 -d30s http://127.0.0.1:8000/
+
+    Running 30s test @ http://127.0.0.1:8000/
+        10 threads and 100 connections
+        Thread Stats   Avg      Stdev     Max   +/- Stdev
+            Latency     8.90ms    3.40ms  67.06ms   80.55%
+            Req/Sec     0.93k   101.60     1.16k    85.25%
+        279248 requests in 32.88s, 825.30MB read
+        Socket errors: connect 0, read 0, write 0, timeout 99
+    Requests/sec:   8491.81
+    Transfer/sec:     25.10MB
+
+    *Тестирование через Nginx: wrk -t10 -c100 -d30s http://localhost/
+
+    Running 30s test @ http://localhost/
+    10 threads and 100 connections
+        Thread Stats   Avg      Stdev     Max   +/- Stdev
+            Latency    14.59ms    3.64ms  68.80ms   84.01%
+            Req/Sec   689.07     74.63     0.87k    82.29%
+        206734 requests in 32.90s, 614.57MB read
+        Socket errors: connect 0, read 0, write 0, timeout 100
+    Requests/sec:   6284.40
+    Transfer/sec:     18.68MB
+
+## Структура проекта
+
+- `venv/`: Виртуальное окружение Python.
+- `public/`: Статические файлы (HTML, CSS, изображения).
+  - `css/`: Папка с css (в дальнейшем).
+    - `style.css`: Стили.
+  - `index.html`: Основная страница (болванка оформления).
+- `src/`: Исходный код приложения.
+  - `myapp.py`: WSGI-приложение.
+- `.env`: - Файл с переменными окружения (PROJECT_ROOT=/your_path/to/project)
+
+## Примеры команд
+
+- Запуск Gunicorn: `gunicorn src.myapp:app --bind 127.0.0.1:8000`
+- Тестирование производительности: `wrk -t10 -c100 -d30s http://localhost/`
