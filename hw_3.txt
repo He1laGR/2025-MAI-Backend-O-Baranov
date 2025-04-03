@@ -1,0 +1,87 @@
+# Отчет по домашнему заданию №3
+
+## 1. Создание проекта (2 балла)
+Вместо Django был использован FastAPI для создания аналитического портала. 
+
+**Тематика проекта:** Аналитический портал
+- Основной функционал: отображение и управление аналитическими статьями
+- Возможность категоризации статей (бизнес-аналитика, системная аналитика и т.д.)
+- Возможность добавления статей в избранное
+- Подготовлена структура для будущей авторизации пользователей
+
+## 2. Реализация API заглушек (3 балла)
+В файле `src/main.py` реализованы следующие эндпоинты:
+
+# Профиль пользователя
+@app.get("/api/profile/{user_id}")
+async def get_profile(user_id: int)
+
+# Список постов
+@app.get("/api/posts")
+async def get_posts()
+
+# Категории
+@app.get("/api/categories")
+async def get_categories()
+
+# Посты определенной категории
+@app.get("/api/category/{category_id}/posts")
+async def get_category_posts(category_id: int)
+
+# Работа с избранным
+@app.get("/api/favorites/{user_id}")
+async def get_favorites(user_id: int)
+
+@app.post("/api/favorites/add")
+async def add_to_favorites(request: FavoritePostRequest)
+
+@app.post("/api/favorites/remove")
+async def remove_from_favorites(request: FavoritePostRequest)
+
+## 3. Настройка Nginx (3 балла)
+Создана конфигурация nginx (`/etc/nginx/sites-available/mai_backend_project.conf`) с двумя основными location:
+
+# API эндпоинты (FastAPI)
+location /api/ {
+    proxy_pass http://127.0.0.1:8000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+
+# Статический контент
+location /public/ {
+    alias /home/oleg/mai_projects/2025-MAI-Backend-O-Baranov/public/;
+    index index.html;
+    try_files $uri $uri/ =404;
+}
+
+## 4. Обработка методов GET/POST (2 балла)
+Реализована обработка необходимых HTTP методов:
+- GET: получение данных (профиль, посты, категории, избранное)
+- POST: управление избранным (добавление/удаление)
+
+## Дополнительно реализовано:
+1. Базовый веб-интерфейс с использованием Bootstrap
+2. CORS middleware для обработки кросс-доменных запросов
+3. Модели данных с использованием Pydantic
+4. Структура для будущего парсинга статей с Habr
+
+## Структура проекта:
+project/
+├── src/
+│   └── main.py          # FastAPI приложение
+├── public/
+│   └── index.html       # Веб-интерфейс
+└── requirements.txt     # Зависимости проекта
+
+## Запуск проекта:
+1. Установка зависимостей: pip install -r requirements.txt
+2. Запуск FastAPI: cd src && uvicorn main:app --reload --host 0.0.0.0 --port 8000
+3. Настройка и запуск nginx: sudo systemctl restart nginx
+
+## Доступ к приложению:
+- Веб-интерфейс: http://localhost/public/
+- API: http://localhost/api/
+- Документация API: http://localhost/api/docs
