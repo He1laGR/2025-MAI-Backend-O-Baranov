@@ -1,0 +1,118 @@
+# Отчет по домашнему заданию №4
+
+## 1. Установка и настройка PostgreSQL
+
+### Установка PostgreSQL
+```bash
+sudo apt update
+sudo apt install postgresql postgresql-contrib -y
+```
+
+### Создание пользователя и базы данных
+```bash
+# Создание пользователя
+sudo -u postgres psql -c "CREATE USER admin WITH PASSWORD 'admin';"
+
+# Создание базы данных
+sudo -u postgres psql -c "CREATE DATABASE mai_project OWNER admin;"
+```
+
+### Настройка доступа
+1. Редактирование файла конфигурации PostgreSQL:
+```bash
+sudo nano /etc/postgresql/*/main/pg_hba.conf
+```
+
+2. Перезапуск PostgreSQL:
+```bash
+sudo systemctl restart postgresql
+```
+
+### Проверка подключения
+```bash
+psql -U admin -d mai_project -h localhost
+```
+
+## 2. Проектирование базы данных
+
+### Структура базы данных
+Созданы следующие таблицы с различными типами связей:
+
+1. **One-to-One** связь:
+   - User -> UserRole (один пользователь имеет одну роль)
+
+2. **One-to-Many** связи (ForeignKey):
+   - Category -> Post (одна категория может содержать множество постов)
+   - User -> Comment (один пользователь может оставить множество комментариев)
+   - Post -> Comment (один пост может содержать множество комментариев)
+   - Category -> Category (иерархия категорий, одна категория может быть родительской для множества подкатегорий)
+
+3. **Many-to-Many** связи:
+   - Post <-> Tag (пост может иметь множество тегов, тег может быть у множества постов)
+   - User <-> Post (через таблицу Favorite, пользователь может добавить множество постов в избранное)
+
+### Модели данных
+Модели определены в файле `src/models.py`:
+
+```python
+# Основные модели:
+- User (пользователи)
+- Category (категории)
+- Tag (теги)
+- Post (статьи/посты)
+- Favorite (избранное)
+- Comment (комментарии)
+
+# Связующие таблицы:
+- post_tags (связь многие-ко-многим между постами и тегами)
+```
+
+### Миграция базы данных
+1. Установка зависимостей:
+```bash
+pip install -r requirements.txt
+```
+
+2. Создание таблиц:
+```bash
+cd src
+python migrations.py
+```
+
+### Проверка структуры базы данных
+```bash
+# Подключение к базе данных
+psql -U admin -d mai_project -h localhost
+
+# Просмотр списка таблиц
+\dt
+mai_project=> \dt
+          List of relations
+ Schema |    Name    | Type  | Owner
+--------+------------+-------+-------
+ public | categories | table | admin
+ public | comments   | table | admin
+ public | favorites  | table | admin
+ public | post_tags  | table | admin
+ public | posts      | table | admin
+ public | tags       | table | admin
+ public | test       | table | admin
+ public | users      | table | admin
+ 
+# Просмотр структуры конкретной таблицы
+\d table_name
+```
+
+## Параметры подключения к базе данных
+- Имя пользователя: `admin`
+- Пароль: `admin`
+- Имя базы данных: `mai_project`
+- Хост: `localhost`
+- Порт: `5432`
+
+## Дополнительные зависимости
+Добавлены в `requirements.txt`:
+- sqlalchemy==2.0.27
+- psycopg2-binary==2.9.9
+- python-jose[cryptography]==3.3.0
+- passlib[bcrypt]==1.7.4 
