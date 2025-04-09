@@ -1,0 +1,99 @@
+# Отчет по домашнему заданию №5
+
+## Задание
+Реализовать вьюшки для работы с объектами (книги, фильмы и т.д.). В ходе выполнения домашнего задания №3 в проекте уже были созданы заглушки, теперь их необходимо реализовать.
+
+### Эндпоинты
+
+1. **Поиск сущностей** (`/search`)
+   - **Метод:** GET
+   - **Описание:** Принимает параметр `q`, в котором содержится строка. Возвращает объекты, в двух полях минимум которых содержится строка из параметра `q`.
+   - **Пример запроса:** `/search?q=молчание`
+   - **Пример ответа:** Список постов, в заголовке или содержимом которых встречается слово "молчание".
+
+   ```python
+   @app.get("/search", response_model=List[schemas.Post])
+   async def search_posts(q: str = Query(..., description="Search query"), db: Session = Depends(get_db)):
+       posts = db.query(models.Post).filter(
+           or_(
+               models.Post.title.ilike(f"%{q}%"),
+               models.Post.content.ilike(f"%{q}%")
+           )
+       ).all()
+       return posts
+   ```
+
+2. **Получение всех объектов из БД** (`/posts`)
+   - **Метод:** GET
+   - **Описание:** Возвращает все посты из базы данных.
+   - **Пример ответа:** Список всех постов.
+
+   ```python
+   @app.get("/posts", response_model=List[schemas.Post])
+   async def get_posts(db: Session = Depends(get_db)):
+       posts = db.query(models.Post).all()
+       return posts
+   ```
+
+3. **Создание нового объекта в БД** (`/posts`)
+   - **Метод:** POST
+   - **Описание:** Создает новый пост в базе данных.
+   - **Пример запроса:** 
+   ```json
+   {
+       "title": "Introduction to Business Analytics",
+       "content": "Business analytics is the practice of iterative, methodical exploration of an organization's data.",
+       "category_id": 1
+   }
+   ```
+   - **Пример ответа:** Созданный пост.
+
+   ```python
+   @app.post("/posts", response_model=schemas.Post)
+   async def create_post(post: schemas.PostCreate, db: Session = Depends(get_db)):
+       category = db.query(models.Category).filter(models.Category.id == post.category_id).first()
+       if not category:
+           raise HTTPException(status_code=404, detail="Category not found")
+       
+       db_post = models.Post(
+           title=post.title,
+           content=post.content,
+           category_id=post.category_id,
+           created_at=datetime.utcnow()
+       )
+       
+       db.add(db_post)
+       db.commit()
+       db.refresh(db_post)
+       return db_post
+   ```
+
+## Заключение
+Все необходимые вьюшки были успешно реализованы. Теперь приложение поддерживает поиск, получение всех объектов и создание новых объектов в базе данных. Эндпоинты возвращают данные в формате JSON и обрабатывают только нужные HTTP методы (GET/POST). 
+
+## Запуск эндпоинтов
+
+Для тестирования эндпоинтов можно использовать утилиту `curl`. Вот примеры команд для каждого эндпоинта:
+
+1. **Поиск сущностей** (`/search`)
+   ```bash
+   curl -X GET "http://localhost:8000/search?q=молчание"
+   ```
+
+2. **Получение всех объектов из БД** (`/posts`)
+   ```bash
+   curl -X GET "http://localhost:8000/posts"
+   ```
+
+3. **Создание нового объекта в БД** (`/posts`)
+   ```bash
+   curl -X POST "http://localhost:8000/posts" \
+   -H "Content-Type: application/json" \
+   -d '{
+       "title": "Introduction to Business Analytics",
+       "content": "Business analytics is the practice of iterative, methodical exploration of an organization's data.",
+       "category_id": 1
+   }'
+   ```
+
+Убедитесь, что сервер запущен и доступен по адресу `http://localhost:8000` перед выполнением команд. 
