@@ -4,14 +4,12 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from typing import List
 from datetime import datetime
-import models
-import schemas
-from database import SessionLocal, engine
+from . import models, schemas
+from .database import SessionLocal, engine
 from passlib.context import CryptContext
 
 # Создаем таблицы при запуске
-models.Base.metadata.drop_all(bind=engine)  # Удаляем старые таблицы
-models.Base.metadata.create_all(bind=engine)  # Создаем новые таблицы
+models.Base.metadata.create_all(bind=engine)  # Создаем таблицы, если их нет
 
 app = FastAPI()
 
@@ -191,8 +189,4 @@ async def add_to_favorites(favorite: schemas.FavoriteCreate, db: Session = Depen
     db.add(db_favorite)
     db.commit()
     db.refresh(db_favorite)
-    return db_favorite
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    return db_favorite 

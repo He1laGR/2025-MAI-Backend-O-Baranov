@@ -1,0 +1,70 @@
+Доработки в проекте:
+
+1. Конфигурация Gunicorn (config/gunicorn.conf.py):
+- Добавлен конфигурационный файл для Gunicorn
+- Настроены параметры:
+  * workers = 4 (количество процессов)
+  * worker_class = "uvicorn.workers.UvicornWorker"
+  * bind = "127.0.0.1:8000"
+  * timeout = 120
+
+2. Обновление конфигурации Nginx (config/nginx.conf):
+- Добавлен upstream блок для Gunicorn:
+  upstream gunicorn {
+      server 127.0.0.1:8000;
+      keepalive 32;
+  }
+- Настроен location /api/ для проксирования запросов на Gunicorn
+- Добавлен location /public/ для статических файлов
+- Настроен location /web/ для веб-интерфейса
+
+3. Обработка статических файлов:
+- Создана директория public/ для хранения статических файлов
+- Настроена отдача файлов через Nginx
+- Добавлен autoindex для просмотра содержимого директории
+- Настроены корректные права доступа для директорий
+
+4. Тестирование производительности:
+- Проведено нагрузочное тестирование с помощью wrk
+- Протестированы различные конфигурации:
+  * Прямой доступ к Gunicorn: ~625 RPS
+  wrk -t10 -c100 -d30s http://127.0.0.1:8000/posts
+  Running 30s test @ http://127.0.0.1:8000/posts
+  10 threads and 100 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency     8.58ms    3.46ms  91.47ms   77.01%
+    Req/Sec   174.81     68.13   340.00     53.90%
+  21044 requests in 33.68s, 8.41MB read
+  Socket errors: connect 0, read 0, write 0, timeout 6
+  Requests/sec:    624.81
+  Transfer/sec:    255.66KB
+
+  * Доступ через Nginx: требует оптимизации (т.к. FastApi асинхронный, а gunicorn нет, по хорошему оптимизировать в main файле все на асинхронный подход, также по хорошему настроить конфиги для gunicorn и nginx)
+  wrk -t4 -c100 -d30s http://localhost/api/posts
+  Running 30s test @ http://localhost/api/posts
+  4 threads and 100 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    15.70ms   17.26ms 221.71ms   96.08%
+    Req/Sec   312.57     42.32   383.00     84.33%
+  9366 requests in 33.62s, 6.50MB read
+  Socket errors: connect 0, read 0, write 0, timeout 4
+  Requests/sec:    278.62
+  Transfer/sec:    198.08KB
+- Выявлены оптимальные параметры для нагрузки
+
+5. Изменения в main.py:
+- Исправлены импорты для работы с пакетом src
+- Удален блок запуска через uvicorn (теперь используется Gunicorn)
+- Убрал удаление БД перед запуском
+
+6. Запуск приложения:
+- Приложение запускается через Gunicorn:
+  gunicorn -c config/gunicorn.conf.py src.main:app
+  или напрямую
+  gunicorn -w 4 -b 127.0.0.1:8000 src.main:app
+
+7. Структура URL:
+- API доступно через /api/
+- Веб-интерфейс доступен через /web/
+- Статические файлы доступны через /public/
+- Настроен редирект с корня на /web/
