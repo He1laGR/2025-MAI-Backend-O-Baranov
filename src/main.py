@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, text
 from typing import List
 from datetime import datetime
 from . import models, schemas
@@ -9,7 +9,24 @@ from .database import SessionLocal, engine
 from passlib.context import CryptContext
 
 # Создаем таблицы при запуске
-models.Base.metadata.create_all(bind=engine)  # Создаем таблицы, если их нет
+try:
+    # Создаем ENUM тип, если он не существует
+    with engine.connect() as conn:
+        # Проверяем существование типа
+        result = conn.execute(text(
+            "SELECT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'userrole')"
+        )).scalar()
+        if not result:
+            conn.execute(text(
+                "CREATE TYPE userrole AS ENUM ('ADMIN', 'MODERATOR', 'USER')"
+            ))
+            conn.commit()
+
+    # Создаем таблицы с проверкой существования
+    models.Base.metadata.create_all(bind=engine, checkfirst=True)
+except Exception as e:
+    print(f"Error during database initialization: {e}")
+    # Продолжаем выполнение, так как таблицы могут уже существовать
 
 app = FastAPI()
 
