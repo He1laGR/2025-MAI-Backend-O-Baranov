@@ -1,0 +1,100 @@
+Домашнее задание №7: Реализация REST API с использованием FastAPI
+
+В данном проекте мы реализовали функционал, аналогичный Django REST Framework (DRF), но с использованием FastAPI. 
+Основные компоненты реализации:
+
+1. Сериализация данных (аналог DRF Serializers)
+------------------------------------------
+В FastAPI мы используем Pydantic models (schemas.py) вместо DRF сериализаторов:
+
+- schemas.PostCreate - для создания новых постов
+- schemas.PostUpdate - для частичного обновления постов (аналог PATCH в DRF)
+- schemas.Post - для отображения данных поста
+
+Пример схемы для обновления поста:
+```python
+class PostUpdate(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    source_url: Optional[str] = None
+    category_id: Optional[int] = None
+    tags: Optional[List[int]] = None
+```
+
+2. Views и CRUD операции (аналог DRF Generic Views)
+---------------------------------------------
+В FastAPI мы реализовали все стандартные CRUD операции, которые обычно предоставляются в DRF Generic Views:
+
+a) Получение списка всех объектов (аналог ListAPIView):
+```python
+@app.get("/posts", response_model=List[schemas.Post])
+async def get_posts(db: Session = Depends(get_db)):
+    posts = db.query(models.Post).all()
+    return posts
+```
+
+b) Получение конкретного объекта (аналог RetrieveAPIView):
+```python
+@app.get("/posts/{post_id}", response_model=schemas.Post])
+async def get_post(post_id: int, db: Session = Depends(get_db)):
+    post = db.query(models.Post).filter(models.Post.id == post_id).first()
+    if post is None:
+        raise HTTPException(status_code=404, detail="Post not found")
+    return post
+```
+
+c) Обновление объекта (аналог UpdateAPIView):
+```python
+@app.patch("/posts/{post_id}", response_model=schemas.Post)
+async def update_post(post_id: int, post: schemas.PostUpdate, db: Session = Depends(get_db))
+```
+
+d) Удаление объекта (аналог DestroyAPIView):
+```python
+@app.delete("/posts/{post_id}")
+async def delete_post(post_id: int, db: Session = Depends(get_db))
+```
+
+3. Маршрутизация (аналог urls.py в Django)
+------------------------------------
+В FastAPI маршрутизация определяется непосредственно через декораторы:
+
+- GET /api/posts - список всех постов
+- GET /api/posts/{post_id} - детальная информация о посте
+- PATCH /api/posts/{post_id} - обновление поста
+- DELETE /api/posts/{post_id} - удаление поста
+
+4. Дополнительные возможности
+-------------------------
+- Автоматическая валидация данных через Pydantic
+- Автоматическая генерация OpenAPI документации (Swagger UI)
+- Асинхронная обработка запросов
+- Встроенная поддержка CORS
+
+5. Тестирование API
+---------------
+API можно тестировать через:
+- Встроенный Swagger UI (доступен по адресу /api/docs)
+- curl команды:
+  ```bash
+  # Получение списка постов
+  curl http://localhost/api/posts
+
+  # Получение конкретного поста
+  curl http://localhost/api/posts/1
+
+  # Обновление поста
+  curl -X PATCH http://localhost/api/posts/1 -H "Content-Type: application/json" -d '{"title":"New Title"}'
+
+  # Удаление поста
+  curl -X DELETE http://localhost/api/posts/1
+  ```
+
+Заключение
+---------
+Хотя мы использовали FastAPI вместо DRF, нам удалось реализовать весь необходимый функционал REST API, включая:
+- Сериализацию данных (через Pydantic)
+- CRUD операции для моделей
+- Валидацию данных
+- Документацию API
+- Удобное тестирование через Swagger UI

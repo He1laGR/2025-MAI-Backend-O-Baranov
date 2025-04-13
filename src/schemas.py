@@ -55,6 +55,13 @@ class PostBase(BaseModel):
 class PostCreate(PostBase):
     pass
 
+class PostUpdate(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    source_url: Optional[str] = None
+    category_id: Optional[int] = None
+    tags: Optional[List[int]] = None
+
 class Post(PostBase):
     id: int
     created_at: datetime

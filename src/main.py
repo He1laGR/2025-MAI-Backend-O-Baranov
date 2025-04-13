@@ -1,8 +1,8 @@
-from fastapi import FastAPI, HTTPException, Depends, Query
+from fastapi import FastAPI, HTTPException, Depends, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, text
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 from . import models, schemas
 from .database import SessionLocal, engine
@@ -28,7 +28,12 @@ except Exception as e:
     print(f"Error during database initialization: {e}")
     # Продолжаем выполнение, так как таблицы могут уже существовать
 
-app = FastAPI()
+app = FastAPI(
+    title="MAI Backend API",
+    description="API для блог-платформы",
+    version="1.0.0",
+    root_path="/api"
+)
 
 # Настройка CORS
 app.add_middleware(
@@ -97,6 +102,14 @@ async def get_posts(db: Session = Depends(get_db)):
     posts = db.query(models.Post).all()
     return posts
 
+# Получение конкретного поста
+@app.get("/posts/{post_id}", response_model=schemas.Post)
+async def get_post(post_id: int, db: Session = Depends(get_db)):
+    post = db.query(models.Post).filter(models.Post.id == post_id).first()
+    if post is None:
+        raise HTTPException(status_code=404, detail="Post not found")
+    return post
+
 # Создание нового поста
 @app.post("/posts", response_model=schemas.Post)
 async def create_post(post: schemas.PostCreate, db: Session = Depends(get_db)):
@@ -123,6 +136,47 @@ async def create_post(post: schemas.PostCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_post)
     return db_post
+
+# Обновление поста
+@app.patch("/posts/{post_id}", response_model=schemas.Post)
+async def update_post(post_id: int, post: schemas.PostUpdate, db: Session = Depends(get_db)):
+    db_post = db.query(models.Post).filter(models.Post.id == post_id).first()
+    if db_post is None:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    # Обновляем только предоставленные поля
+    post_data = post.dict(exclude_unset=True)
+    
+    # Если указана новая категория, проверяем её существование
+    if 'category_id' in post_data:
+        category = db.query(models.Category).filter(models.Category.id == post_data['category_id']).first()
+        if not category:
+            raise HTTPException(status_code=404, detail="Category not found")
+    
+    # Обновляем поля
+    for field, value in post_data.items():
+        if field != 'tags':
+            setattr(db_post, field, value)
+    
+    # Обновляем теги, если они предоставлены
+    if 'tags' in post_data and post_data['tags'] is not None:
+        tags = db.query(models.Tag).filter(models.Tag.id.in_(post_data['tags'])).all()
+        db_post.tags = tags
+    
+    db.commit()
+    db.refresh(db_post)
+    return db_post
+
+# Удаление поста
+@app.delete("/posts/{post_id}")
+async def delete_post(post_id: int, db: Session = Depends(get_db)):
+    db_post = db.query(models.Post).filter(models.Post.id == post_id).first()
+    if db_post is None:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    db.delete(db_post)
+    db.commit()
+    return {"message": "Post deleted successfully"}
 
 # Получение всех категорий
 @app.get("/categories", response_model=List[schemas.Category])
